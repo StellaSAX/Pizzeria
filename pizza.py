@@ -1,107 +1,110 @@
-from sqlmodel import SQLModel, Field, Relationship, Session, create_engine, select
-from typing import List, Optional
-from sqlalchemy import text
-from uuid import uuid4
+import sqlite3
 
-class Pizza(SQLModel, table=True):
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    name: str
-    price: float
+# Создаем подключение к базе данных (если базы данных нет, она будет создана)
+conn = sqlite3.connect('pizza_database.db')
 
-class Customer(SQLModel, table=True):
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    name: str
-    email: str
+# Создаем курсор для выполнения SQL-запросов
+cursor = conn.cursor()
 
-class PizzaOrder(SQLModel, table=True):
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    customer_id: int = Field(foreign_key="customer.id")
-    pizza_id: int = Field(foreign_key="pizza.id")
-    quantity: int
-    payments: List["Payment"] = Relationship(back_populates="order")
+# Создаем таблицу Посетители
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Guest (
+    id_Посетителя INTEGER NOT NULL PRIMARY KEY,
+    Имя TEXT DEFAULT '50',
+    Фамилия TEXT DEFAULT '50',
+    Номер_телефона TEXT DEFAULT '15',
+    Email TEXT DEFAULT '100'
+)
+''')
 
-class Employee(SQLModel, table=True):
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    name: str
-    position: str
-    salary: float
+# Заполнение таблицы Гости
+guests = [
+    (1, 'Иван', 'Иванов', '1234567890', 'ivan@example.com'),
+    (2, 'Петр', 'Петров', '0987654321', 'petr@example.com'),
+    (3, 'Светлана', 'Сидорова', '1122334455', 'svetlana@example.com')
+]
 
-class Payment(SQLModel, table=True):
-    id: Optional[str] = Field(default_factory=lambda: str(uuid4()), primary_key=True)
-    order_id: int = Field(foreign_key="pizzaorder.id")
-    amount: float
-    payment_date: str  # Можно использовать тип datetime для более точного хранения
-    order: PizzaOrder = Relationship(back_populates="payments")
+cursor.executemany('''
+INSERT INTO Guest (id_Посетителя, Имя, Фамилия, Номер_телефона, Email)
+VALUES (?, ?, ?, ?, ?)
+''', guests)
 
-# Создаем базу данных
-engine = create_engine("sqlite:///pizzeria.db")
-SQLModel.metadata.create_all(engine)
+# Создаем таблицу Заказoв
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Orders (
+    id_Заказа INTEGER NOT NULL PRIMARY KEY,
+    id_Номер INTEGER,
+    id_Посетителя INTEGER,
+    Дата_заказа DATE,
+    Статус_заказа TEXT DEFAULT '20',
+    FOREIGN KEY (id_Номер) REFERENCES Номера(id_Номер),
+    FOREIGN KEY (id_Посетителя) REFERENCES Гости(id_Посетителя)
+)
+''')
 
-# Заполняем базу данных
-with Session(engine) as session:
-    # Добавляем пиццы
-    pizza1 = Pizza(name="Маргарита", price=8.50)
-    pizza2 = Pizza(name="Пепперони", price=9.00)
-    session.add(pizza1)
-    session.add(pizza2)
+# Заполнение таблицы Заказoв
+orderst = [
+    (1, 101, 1, '2024-12-20', 'Подтверждено'),
+    (2, 102, 2, '2024-12-22', 'Ожидает подтверждения'),
+    (3, 103, 3, '2024-12-24', 'Отменено'),
+    (4, 101, 2, '2024-12-27', 'Подтверждено'),
+]
 
-    # Добавляем клиентов
-    customer1 = Customer(name="Иван Иванов", email="ivan@example.com")
-    customer2 = Customer(name="Мария Петрова", email="maria@example.com")
-    session.add(customer1)
-    session.add(customer2)
+cursor.executemany('''
+INSERT INTO Orders (id_Заказа, id_Номер, id_Посетителя, Дата_заказа, Статус_заказа)
+VALUES (?, ?, ?, ?, ?)
+''', orderst)
 
-    # Добавляем заказы
-    order1 = PizzaOrder(customer_id=1, pizza_id=1, quantity=2)
-    order2 = PizzaOrder(customer_id=2, pizza_id=2, quantity=1)
-    session.add(order1)
-    session.add(order2)
+# Создаем таблицу Пицеррий
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Pizzeria (
+    id_Пиццерии INTEGER NOT NULL PRIMARY KEY,
+    Название TEXT DEFAULT '50',
+    Адрес TEXT DEFAULT '20',
+    Номер_телефона TEXT DEFAULT '15',
+    Общее_количество_блюд INTEGER NOT NULL,
+    Дополнительная_информация TEXT
+)
+''')
 
-    # Создаем сотрудников
-    employee1 = Employee(name="Алексей Смирнов", position="Повар", salary=30000)
-    employee2 = Employee(name="Ольга Кузнецова", position="Официант", salary=25000)
-    session.add(employee1)
-    session.add(employee2)
-    
-    # Создаем платежи
-    payment1 = Payment(order_id=order1.id, amount=17.00, payment_date="2024-12-15")
-    payment2 = Payment(order_id=order2.id, amount=9.00, payment_date="2024-12-15")
-    session.add(payment1)
-    session.add(payment2)
-    
-    session.commit()
+# Заполнение таблицы Пицеррий
+Pizzerias = [
+    (1, 'Mamma Mia', 'Улица Солнечная, 1', '123456789', 50, 'Бесплатный Wi-Fi'),
+    (2, 'Luigi&Mario', 'Улица Лунная, 2', '987654321', 30, 'Тук-тук')
+]
 
-def get_orders_with_details(session: Session):
-    query = text(
-        "SELECT c.name AS customer_name, p.name AS pizza_name,"
-        "'Кол-во: ' as MESSAGE, o.quantity "
-        "FROM PizzaOrder o "
-        "JOIN Customer c ON o.customer_id = c.id "
-        "JOIN Pizza p ON o.pizza_id = p.id"
-    )
-    orders = session.execute(query).all()
-    return orders
+cursor.executemany('''
+INSERT INTO Pizzeria (id_Пиццерии, Название, Адрес, Номер_телефона, Общее_количество_блюд, Дополнительная_информация)
+VALUES (?, ?, ?, ?, ?, ?)
+''', Pizzerias)
 
-def get_all_employees(session: Session):
-    return session.query(Employee).all()
 
-def get_all_payments(session: Session):
-    return session.query(Payment).all()
+# Создаем таблицу Меню
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS Pizza (
+    id_Номер INTEGER NOT NULL PRIMARY KEY,
+    id_гос INTEGER,
+    id_Пиццерии INTEGER,
+    Название TEXT DEFAULT '50',
+    Цена DECIMAL(18, 0),
+    Дополнительная_информация TEXT,
+    FOREIGN KEY (id_гос) REFERENCES Номера(id_Номер),
+    FOREIGN KEY (id_Пиццерии) REFERENCES Пиццерии(id_Пиццерии)
+)
+''')
 
-# Использование метода
-with Session(engine) as session:
-    
-    orders = get_orders_with_details(session)
-    for order in orders:
-        print(order)
-        
-    employees = get_all_employees(session)
-    payments = get_all_payments(session)
-    
-    print("Сотрудники:")
-    for employee in employees:
-        print(f"{employee.name} - {employee.position} - {employee.salary} руб.")
-    
-    print("\nПлатежи:")
-    for payment in payments:
-        print(f"Платеж {payment.id}: {payment.amount} руб. за заказ {payment.order_id} на дату {payment.payment_date}")
+# Заполнение таблицы Меню
+pizzas = [
+    (101, None, 1, 'Пепперони', 300, 'Пепперони за отдельную плату'),
+    (102, None, 1, 'Четыре Сыра', 600, 'Пятый сыр в подарок'),
+    (103, None, 2, 'Дьябло', 200, 'Запивать - святой водой')
+]
+
+cursor.executemany('''
+INSERT INTO Pizza (id_Номер, id_гос, id_Пиццерии, Название, Цена, Дополнительная_информация)
+VALUES (?, ?, ?, ?, ?, ?)
+''', pizzas)
+
+# Сохраняем изменения и закрываем соединение
+conn.commit()
+conn.close()
