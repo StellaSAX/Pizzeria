@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS Orders (
     id_Посетителя INTEGER,
     Дата_заказа DATE,
     Статус_заказа TEXT DEFAULT '20',
-    FOREIGN KEY (id_Номер) REFERENCES Номера(id_Номер),
+    FOREIGN KEY (id_Номер) REFERENCES Меню(id_Номер),
     FOREIGN KEY (id_Посетителя) REFERENCES Гости(id_Посетителя)
 )
 ''')
