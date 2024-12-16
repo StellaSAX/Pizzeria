@@ -1,6 +1,6 @@
 import sqlite3
 
-def fetch_guests_with_orders():
+def fetch_pizzerias_with_orders():
     """
     Получает список всех заказов из пиццерий.
     """
@@ -29,10 +29,10 @@ def fetch_guests_with_orders():
 
 # Пример использования функции
 if __name__ == "__main__":
-    guests_with_Orderss = fetch_guests_with_orders()
+    pizza_with_Orderss = fetch_pizzerias_with_orders()
 
     # Вывод результатов
     print("Список Заказов из Пиццерий:")
-    for row in guests_with_Orderss:
+    for row in pizza_with_Orderss:
         название_места, дата_заказа, статус, название = row
         print(f"Пиццерия: {название_места}, Заказ: {дата_заказа}, Статус: {статус}, Пицца: {название}")
