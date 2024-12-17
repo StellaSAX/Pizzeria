@@ -41,13 +41,13 @@ if __name__ == "__main__":
         print(guest)
 
     print("\nЗаказы:")
-    for booking in data["orders"]:
+    for orders in data["orders"]:
         print(booking)
 
     print("\nПиццерии:")
-    for hotel in data["pizzerias"]:
+    for pizzerias in data["pizzerias"]:
         print(hotel)
 
     print("\nПиццы:")
-    for room in data["pizzas"]:
+    for pizzas in data["pizzas"]:
         print(room)
